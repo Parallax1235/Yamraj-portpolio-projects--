@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Yamraj Khadka — Building AI from Nepal</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=Fragment+Mono:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#050508;
+  --ink2:#0a0a10;
+  --surface:#0f0f18;
+  --surface2:#141420;
+  --border:rgba(255,255,255,0.06);
+  --red:#DC143C;
+  --red2:#FF2D55;
+  --cyan:#00E5FF;
+  --amber:#FFB347;
+  --white:#F0F0F8;
+  --dim:#5a5a72;
+  --h:'Unbounded',sans-serif;
+  --mono:'Fragment Mono',monospace;
+  --body:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);
+  color:var(--white);
+  font-family:var(--body);
+  font-size:15px;
+  line-height:1.7;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* CURSOR */
+#cursor{
+  position:fixed;width:12px;height:12px;
+  border-radius:50%;background:var(--red);
+  pointer-events:none;z-index:9999;
+  transition:transform 0.15s,background 0.2s;
+  mix-blend-mode:difference;
+}
+#cursor-ring{
+  position:fixed;width:36px;height:36px;
+  border-radius:50%;border:1px solid rgba(220,20,60,0.5);
+  pointer-events:none;z-index:9998;
+  transition:all 0.12s ease;
+  transform:translate(-50%,-50%);
+}
+body:has(a:hover) #cursor{transform:scale(2.5)}
+
+/* NEURAL CANVAS */
+#neural-canvas{
+  position:fixed;inset:0;z-index:0;
+  opacity:0.35;pointer-events:none;
+}
+
+/* GRAIN */
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:1;opacity:0.5;
+}
+
+/* ── SCROLLING TICKER ── */
+.ticker{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:var(--red);
+  padding:6px 0;
+  overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,0.15);
+}
+.ticker-inner{
+  display:flex;gap:0;
+  animation:ticker 28s linear infinite;
+  white-space:nowrap;
+}
+.ticker-item{
+  font-family:var(--mono);font-size:10px;
+  color:white;letter-spacing:0.15em;
+  padding:0 24px;
+  display:flex;align-items:center;gap:10px;
+}
+.ticker-item::after{content:'//';opacity:0.5}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:28px;left:0;right:0;z-index:100;
+  padding:20px 56px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.nav-logo{
+  font-family:var(--h);font-size:13px;font-weight:700;
+  color:var(--white);text-decoration:none;letter-spacing:0.05em;
+  display:flex;align-items:center;gap:10px;
+}
+.nav-logo-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--red);
+  animation:pulse-dot 2s infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{box-shadow:0 0 0 0 rgba(220,20,60,0.6)}
+  50%{box-shadow:0 0 0 8px rgba(220,20,60,0)}
+}
+.nav-links{display:flex;gap:40px;list-style:none}
+.nav-links a{
+  font-family:var(--mono);font-size:11px;color:var(--dim);
+  text-decoration:none;letter-spacing:0.1em;
+  transition:color 0.2s;position:relative;
+}
+.nav-links a::after{
+  content:'';position:absolute;bottom:-4px;left:0;right:0;
+  height:1px;background:var(--red);
+  transform:scaleX(0);transition:transform 0.2s;
+}
+.nav-links a:hover{color:var(--white)}
+.nav-links a:hover::after{transform:scaleX(1)}
+.nav-contact{
+  font-family:var(--mono);font-size:11px;
+  padding:10px 22px;border:1px solid var(--red);
+  color:var(--red);text-decoration:none;
+  letter-spacing:0.1em;transition:all 0.2s;
+}
+.nav-contact:hover{background:var(--red);color:white}
+
+/* ── HERO ── */
+#hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:120px 56px 80px;
+  position:relative;z-index:2;
+  overflow:hidden;
+}
+.hero-eyebrow{
+  display:flex;align-items:center;gap:16px;
+  font-family:var(--mono);font-size:11px;color:var(--cyan);
+  letter-spacing:0.2em;text-transform:uppercase;
+  margin-bottom:32px;
+  animation:fadeUp 1s ease both;
+}
+.eyebrow-line{width:48px;height:1px;background:var(--cyan)}
+
+/* TERMINAL BOOT */
+.terminal-boot{
+  background:rgba(0,229,255,0.04);
+  border:1px solid rgba(0,229,255,0.12);
+  padding:20px 24px;
+  margin-bottom:40px;
+  max-width:560px;
+  animation:fadeUp 1s ease 0.1s both;
+}
+.terminal-line{
+  font-family:var(--mono);font-size:12px;
+  color:var(--dim);line-height:2;
+  opacity:0;
+}
+.terminal-line.active{opacity:1}
+.terminal-line .green{color:#4ade80}
+.terminal-line .cyan{color:var(--cyan)}
+.terminal-line .red{color:var(--red2)}
+.terminal-cursor{
+  display:inline-block;width:8px;height:14px;
+  background:var(--cyan);
+  animation:blink 1s infinite;vertical-align:middle;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+h1.hero-name{
+  font-family:var(--h);
+  font-size:clamp(48px,9vw,112px);
+  font-weight:900;line-height:0.9;
+  letter-spacing:-0.03em;
+  margin-bottom:12px;
+  animation:fadeUp 1s ease 0.2s both;
+}
+.hero-name-sub{
+  font-family:var(--h);
+  font-size:clamp(32px,5vw,72px);
+  font-weight:300;
+  color:var(--dim);
+  letter-spacing:-0.02em;
+  margin-bottom:40px;
+  animation:fadeUp 1s ease 0.3s both;
+}
+.hero-name-sub span{color:var(--red);font-weight:700}
+.hero-tagline{
+  display:flex;align-items:baseline;gap:20px;
+  margin-bottom:56px;
+  animation:fadeUp 1s ease 0.4s both;
+  flex-wrap:wrap;
+}
+.tagline-main{
+  font-family:var(--body);font-size:19px;
+  color:#9090a8;font-weight:300;max-width:480px;
+}
+.tagline-flag{font-size:36px}
+
+.hero-cta{
+  display:flex;gap:16px;flex-wrap:wrap;
+  animation:fadeUp 1s ease 0.5s both;
+}
+.cta-primary{
+  padding:16px 36px;
+  background:var(--red);color:white;
+  font-family:var(--h);font-size:11px;font-weight:700;
+  letter-spacing:0.1em;text-transform:uppercase;
+  text-decoration:none;border:2px solid var(--red);
+  transition:all 0.25s;position:relative;overflow:hidden;
+}
+.cta-primary::before{
+  content:'';position:absolute;inset:0;
+  background:white;transform:translateY(100%);
+  transition:transform 0.25s;
+}
+.cta-primary:hover{color:var(--red)}
+.cta-primary:hover::before{transform:translateY(0)}
+.cta-primary span{position:relative;z-index:1}
+.cta-ghost{
+  padding:16px 36px;background:transparent;
+  color:var(--dim);
+  font-family:var(--h);font-size:11px;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  text-decoration:none;border:1px solid var(--border);
+  transition:all 0.2s;
+}
+.cta-ghost:hover{color:var(--white);border-color:rgba(255,255,255,0.25)}
+
+/* HERO MARQUEE STATS */
+.hero-stats-row{
+  display:flex;gap:0;margin-top:80px;
+  border-top:1px solid var(--border);
+  animation:fadeUp 1s ease 0.6s both;
+}
+.hstat{
+  flex:1;padding:28px 0 0;
+  border-right:1px solid var(--border);
+  padding-right:32px;margin-right:32px;
+}
+.hstat:last-child{border-right:none}
+.hstat-num{
+  font-family:var(--h);font-size:clamp(28px,4vw,48px);
+  font-weight:900;color:var(--white);
+}
+.hstat-num .unit{color:var(--red);font-size:0.6em}
+.hstat-label{
+  font-family:var(--mono);font-size:10px;
+  color:var(--dim);text-transform:uppercase;
+  letter-spacing:0.12em;margin-top:6px;
+}
+
+/* DIAGONAL DIVIDER */
+.diagonal{
+  height:80px;
+  background:var(--surface);
+  clip-path:polygon(0 0,100% 0,100% 40%,0 100%);
+  position:relative;z-index:2;
+}
+.diagonal.flip{
+  clip-path:polygon(0 40%,100% 0,100% 100%,0 100%);
+  background:var(--ink);
+}
+
+/* ── SECTIONS ── */
+section{position:relative;z-index:2;padding:100px 56px}
+.chip{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:10px;color:var(--red);
+  letter-spacing:0.2em;text-transform:uppercase;
+  margin-bottom:20px;
+}
+.chip::before{
+  content:'▶';font-size:8px;color:var(--red);
+}
+h2.st{
+  font-family:var(--h);
+  font-size:clamp(36px,5.5vw,64px);
+  font-weight:900;line-height:0.95;
+  letter-spacing:-0.03em;margin-bottom:72px;
+}
+h2.st em{font-style:normal;color:var(--red)}
+
+/* ── ABOUT ── */
+#about{background:var(--surface)}
+.about-container{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:80px;align-items:start;
+}
+.about-left{}
+.about-body{
+  font-size:17px;color:#8888a0;font-weight:300;
+  line-height:1.85;
+}
+.about-body p+p{margin-top:24px}
+.about-body strong{color:var(--white);font-weight:500}
+.about-body .highlight{
+  color:var(--cyan);font-family:var(--mono);font-size:0.9em;
+  background:rgba(0,229,255,0.05);
+  padding:1px 6px;
+}
+.quote-block{
+  margin-top:40px;padding:28px 32px;
+  border-left:3px solid var(--red);
+  background:rgba(220,20,60,0.05);
+}
+.quote-text{
+  font-family:var(--h);font-size:17px;font-weight:600;
+  line-height:1.5;color:var(--white);
+}
+.quote-sub{
+  font-family:var(--mono);font-size:11px;
+  color:var(--dim);margin-top:12px;
+}
+
+.about-right{}
+.grind-counter{
+  background:var(--surface2);border:1px solid var(--border);
+  padding:36px;margin-bottom:24px;
+}
+.grind-header{
+  font-family:var(--mono);font-size:10px;
+  color:var(--amber);text-transform:uppercase;
+  letter-spacing:0.15em;margin-bottom:24px;
+  display:flex;align-items:center;gap:10px;
+}
+.grind-header::before{content:'●';color:var(--amber);animation:pulse-dot 1.5s infinite}
+.grind-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:2px;
+}
+.grind-cell{
+  background:rgba(255,179,71,0.08);
+  padding:18px 12px;text-align:center;
+  border:1px solid rgba(255,179,71,0.1);
+  transition:background 0.2s;
+}
+.grind-cell:hover{background:rgba(255,179,71,0.18)}
+.grind-num{
+  font-family:var(--h);font-size:24px;font-weight:900;color:var(--amber);
+}
+.grind-name{
+  font-family:var(--mono);font-size:9px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;
+}
+.info-table{margin-top:24px}
+.it-row{
+  display:flex;align-items:baseline;gap:16px;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.it-k{
+  font-family:var(--mono);font-size:10px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:0.1em;min-width:110px;
+}
+.it-v{font-size:13px;color:var(--white)}
+.it-v a{color:var(--red);text-decoration:none}
+.it-v a:hover{text-decoration:underline}
+
+/* ── PROJECTS ── */
+#projects{background:var(--ink2)}
+.proj-featured{
+  display:grid;grid-template-columns:1.2fr 1fr;
+  gap:0;border:1px solid var(--border);
+  margin-bottom:24px;
+  transition:border-color 0.3s;
+}
+.proj-featured:hover{border-color:rgba(220,20,60,0.35)}
+.pf-left{
+  padding:52px 48px;
+  border-right:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.pf-left::before{
+  content:'';position:absolute;top:0;left:0;right:0;
+  height:3px;
+  background:linear-gradient(90deg,var(--red),var(--amber),var(--cyan));
+}
+.pf-num{
+  font-family:var(--mono);font-size:10px;color:var(--red);
+  letter-spacing:0.2em;margin-bottom:20px;
+}
+.pf-title{
+  font-family:var(--h);font-size:28px;font-weight:700;
+  line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em;
+}
+.pf-desc{
+  font-size:13px;color:#7070888;line-height:1.75;
+  margin-bottom:28px;color:#888898;
+}
+.pf-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px}
+.ptag{
+  font-family:var(--mono);font-size:9px;
+  padding:5px 12px;letter-spacing:0.08em;
+  text-transform:uppercase;border:1px solid var(--border);
+  color:var(--dim);transition:all 0.2s;
+}
+.ptag:hover{border-color:var(--red);color:var(--red)}
+.ptag.hot{border-color:rgba(220,20,60,0.4);color:var(--red)}
+.ptag.live{border-color:rgba(0,229,255,0.3);color:var(--cyan)}
+.ptag.gold{border-color:rgba(255,179,71,0.3);color:var(--amber)}
+.pf-links{display:flex;gap:20px}
+.plink{
+  font-family:var(--mono);font-size:11px;color:var(--dim);
+  text-decoration:none;display:flex;align-items:center;gap:8px;
+  letter-spacing:0.08em;transition:color 0.2s;
+}
+.plink:hover{color:var(--white)}
+.plink.primary{color:var(--red)}
+.plink.primary:hover{color:var(--red2)}
+.pf-right{
+  padding:52px 40px;
+  background:rgba(0,0,0,0.2);
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.pf-right-title{
+  font-family:var(--mono);font-size:10px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:0.15em;
+  margin-bottom:28px;padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+.metric-row{margin-bottom:20px}
+.mr-top{
+  display:flex;justify-content:space-between;
+  font-family:var(--mono);font-size:11px;margin-bottom:8px;
+}
+.mr-label{color:var(--dim)}
+.mr-val{color:var(--white)}
+.mr-bar{height:2px;background:var(--border);overflow:hidden}
+.mr-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--amber))}
+.pf-badge{
+  margin-top:24px;padding:16px 20px;
+  background:rgba(0,229,255,0.05);
+  border:1px solid rgba(0,229,255,0.12);
+}
+.badge-title{
+  font-family:var(--mono);font-size:9px;color:var(--cyan);
+  text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px;
+}
+.badge-text{font-size:12px;color:#7070a0;line-height:1.6}
+
+/* Projects Grid */
+.proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.pg-card{
+  background:var(--surface);
+  padding:40px 36px;
+  position:relative;overflow:hidden;
+  transition:background 0.3s,transform 0.3s;
+  transform-style:preserve-3d;
+}
+.pg-card:hover{background:var(--surface2);transform:translateY(-4px)}
+.pg-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;
+  height:2px;background:linear-gradient(90deg,var(--red),transparent);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform 0.4s;
+}
+.pg-card:hover::after{transform:scaleX(1)}
+.pg-num{
+  font-family:var(--mono);font-size:10px;color:var(--border);
+  margin-bottom:16px;font-size:48px;font-weight:900;
+  font-family:var(--h);line-height:1;
+  color:rgba(255,255,255,0.04);
+  position:absolute;top:16px;right:20px;
+}
+.pg-title{
+  font-family:var(--h);font-size:17px;font-weight:700;
+  margin-bottom:10px;line-height:1.3;letter-spacing:-0.01em;
+}
+.pg-desc{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:20px}
+.pg-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+.pg-link{
+  font-family:var(--mono);font-size:10px;color:var(--red);
+  text-decoration:none;letter-spacing:0.1em;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:gap 0.2s;
+}
+.pg-link:hover{gap:14px}
+.pg-link::after{content:'→'}
+
+/* ── SKILLS ── */
+#skills{background:var(--surface)}
+.skills-outer{display:grid;grid-template-columns:1fr 2fr;gap:64px;align-items:start}
+.skills-intro{}
+.skills-note{
+  font-size:15px;color:#7070888;font-weight:300;line-height:1.85;color:#888898;
+  margin-bottom:32px;
+}
+.learning-badge{
+  display:flex;align-items:center;gap:14px;
+  padding:20px 24px;
+  border:1px solid var(--border);
+  background:rgba(255,179,71,0.04);
+}
+.lb-num{
+  font-family:var(--h);font-size:36px;font-weight:900;color:var(--amber);
+}
+.lb-text{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.6}
+
+.skills-right{display:flex;flex-direction:column;gap:2px}
+.skill-cat{background:var(--surface2);border:1px solid var(--border)}
+.skill-cat-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:20px 28px;cursor:pointer;
+  font-family:var(--h);font-size:14px;font-weight:700;
+  letter-spacing:0.02em;
+  transition:background 0.2s;
+  user-select:none;
+}
+.skill-cat-header:hover{background:rgba(255,255,255,0.03)}
+.skill-cat-arrow{
+  font-family:var(--mono);font-size:12px;color:var(--red);
+  transition:transform 0.3s;
+}
+.skill-cat.open .skill-cat-arrow{transform:rotate(90deg)}
+.skill-cat-body{
+  max-height:0;overflow:hidden;
+  transition:max-height 0.4s ease;
+}
+.skill-cat.open .skill-cat-body{max-height:400px}
+.skill-pills{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:0 28px 24px;
+}
+.skill-pill{
+  font-family:var(--mono);font-size:11px;
+  padding:7px 16px;
+  border:1px solid var(--border);color:var(--dim);
+  transition:all 0.2s;cursor:default;
+}
+.skill-pill:hover{border-color:rgba(220,20,60,0.5);color:var(--white);background:rgba(220,20,60,0.06)}
+.skill-pill.core{border-color:rgba(220,20,60,0.35);color:var(--red)}
+
+/* ── JOURNEY ── */
+#journey{background:var(--ink2)}
+.journey-intro{
+  max-width:600px;
+  font-size:16px;color:#888898;font-weight:300;
+  line-height:1.85;margin-bottom:72px;
+}
+.journey-intro strong{color:var(--white)}
+.journey-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)}
+.jcard{
+  background:var(--surface);padding:32px 28px;
+  position:relative;overflow:hidden;
+  transition:background 0.3s;
+}
+.jcard:hover{background:var(--surface2)}
+.jcard-day{
+  font-family:var(--h);font-size:42px;font-weight:900;
+  color:rgba(220,20,60,0.15);line-height:1;
+  margin-bottom:16px;
+}
+.jcard-topic{
+  font-family:var(--h);font-size:14px;font-weight:700;
+  margin-bottom:8px;letter-spacing:-0.01em;line-height:1.3;
+}
+.jcard-detail{font-size:12px;color:var(--dim);line-height:1.6}
+.jcard-status{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:9px;
+  margin-top:16px;
+  text-transform:uppercase;letter-spacing:0.12em;
+  color:var(--cyan);
+}
+.jcard-status::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--cyan);
+}
+
+/* ── RESEARCH ── */
+#research{background:var(--surface)}
+.research-hero{
+  display:grid;grid-template-columns:1fr auto;
+  gap:64px;align-items:center;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  padding:64px;
+  margin-bottom:2px;
+  position:relative;overflow:hidden;
+}
+.research-hero::before{
+  content:'ICRTAI 2025';
+  position:absolute;right:-20px;top:50%;transform:translateY(-50%) rotate(90deg);
+  font-family:var(--h);font-size:80px;font-weight:900;
+  color:rgba(255,255,255,0.025);white-space:nowrap;
+  pointer-events:none;
+}
+.rh-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  background:rgba(220,20,60,0.1);
+  border:1px solid rgba(220,20,60,0.3);
+  padding:8px 16px;
+  font-family:var(--mono);font-size:10px;color:var(--red);
+  letter-spacing:0.12em;text-transform:uppercase;
+  margin-bottom:24px;
+}
+.rh-title{
+  font-family:var(--h);font-size:clamp(18px,2.5vw,26px);
+  font-weight:700;line-height:1.3;letter-spacing:-0.02em;
+  margin-bottom:16px;
+}
+.rh-meta{font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:20px}
+.rh-abstract{font-size:14px;color:#7a7a90;line-height:1.7}
+.rh-scores{
+  display:flex;flex-direction:column;gap:16px;
+  flex-shrink:0;
+}
+.score-box{
+  text-align:center;padding:28px 36px;
+  border:1px solid var(--border);
+  background:var(--surface);
+}
+.score-val{
+  font-family:var(--h);font-size:44px;font-weight:900;
+  color:var(--amber);line-height:1;
+}
+.score-lab{
+  font-family:var(--mono);font-size:9px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:0.12em;margin-top:8px;
+}
+.class-iou-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:1px;background:var(--border);
+}
+.ciou{
+  background:var(--surface);padding:20px 12px;text-align:center;
+  transition:background 0.2s;
+}
+.ciou:hover{background:var(--surface2)}
+.ciou-name{font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:10px;line-height:1.4}
+.ciou-val{
+  font-family:var(--h);font-size:20px;font-weight:900;
+}
+
+/* ── MODELS ── */
+#models{background:var(--ink2)}
+.model-cards{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.mcard{
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:40px;
+  transition:border-color 0.3s,transform 0.3s;
+}
+.mcard:hover{border-color:rgba(220,20,60,0.3);transform:translateY(-3px)}
+.mcard-icon{font-size:32px;margin-bottom:20px}
+.mcard-name{
+  font-family:var(--h);font-size:20px;font-weight:700;
+  margin-bottom:8px;letter-spacing:-0.01em;
+}
+.mcard-id{
+  font-family:var(--mono);font-size:11px;color:var(--red);
+  margin-bottom:20px;
+}
+.mcard-specs{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.mspec{
+  display:flex;justify-content:space-between;
+  font-family:var(--mono);font-size:11px;
+  padding:8px 12px;background:rgba(255,255,255,0.03);
+}
+.mspec-k{color:var(--dim)}
+.mspec-v{color:var(--white)}
+.mcard-link{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;color:var(--red);
+  text-decoration:none;letter-spacing:0.08em;
+  text-transform:uppercase;transition:gap 0.2s;
+}
+.mcard-link:hover{gap:14px}
+.mcard-link::after{content:'→'}
+
+/* ── CONTACT ── */
+#contact{
+  background:var(--ink);
+  min-height:70vh;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.contact-split{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:80px;align-items:center;
+}
+.contact-left{}
+.contact-big{
+  font-family:var(--h);
+  font-size:clamp(48px,8vw,96px);
+  font-weight:900;line-height:0.9;
+  letter-spacing:-0.04em;margin-bottom:32px;
+}
+.contact-big .line2{color:var(--red)}
+.contact-sub{
+  font-size:16px;color:#888898;font-weight:300;
+  line-height:1.75;max-width:440px;margin-bottom:48px;
+}
+.contact-links{display:flex;flex-direction:column;gap:2px}
+.clink{
+  display:flex;align-items:center;gap:20px;
+  padding:20px 24px;border:1px solid var(--border);
+  text-decoration:none;color:var(--dim);
+  transition:all 0.2s;
+  position:relative;overflow:hidden;
+}
+.clink::before{
+  content:'';position:absolute;inset:0;
+  background:rgba(220,20,60,0.06);
+  transform:translateX(-100%);transition:transform 0.3s;
+}
+.clink:hover::before{transform:translateX(0)}
+.clink:hover{color:var(--white);border-color:rgba(220,20,60,0.3)}
+.clink-icon{font-size:20px;position:relative;z-index:1}
+.clink-info{position:relative;z-index:1}
+.clink-platform{
+  font-family:var(--h);font-size:13px;font-weight:700;
+}
+.clink-handle{
+  font-family:var(--mono);font-size:11px;color:var(--red);margin-top:2px;
+}
+.clink-arrow{
+  margin-left:auto;font-family:var(--mono);font-size:14px;
+  position:relative;z-index:1;
+  transition:transform 0.2s;
+}
+.clink:hover .clink-arrow{transform:translateX(6px)}
+
+.contact-right{
+  background:var(--surface);border:1px solid var(--border);
+  padding:48px;
+}
+.cr-title{
+  font-family:var(--h);font-size:20px;font-weight:700;
+  margin-bottom:24px;letter-spacing:-0.01em;
+}
+.cr-item{
+  display:flex;align-items:baseline;gap:16px;
+  padding:14px 0;border-bottom:1px solid var(--border);
+}
+.cr-icon{color:var(--red);font-size:12px}
+.cr-text{font-size:13px;color:#888898;line-height:1.5}
+.cr-text strong{color:var(--white);font-weight:500}
+
+/* ── FOOTER ── */
+footer{
+  padding:28px 56px;
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--mono);font-size:10px;color:var(--dim);
+  position:relative;z-index:2;background:var(--ink);
+}
+.footer-nepal{font-size:16px;margin:0 8px}
+
+/* ANIMATIONS */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(28px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.reveal{opacity:0;transform:translateY(32px);transition:opacity 0.8s ease,transform 0.8s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--ink)}
+::-webkit-scrollbar-thumb{background:var(--red);border-radius:2px}
+
+/* RESPONSIVE */
+@media(max-width:1024px){
+  nav{padding:16px 24px}
+  .nav-links,.nav-contact{display:none}
+  section{padding:80px 24px}
+  #hero{padding:120px 24px 60px}
+  .about-container,.contact-split,.model-cards,.research-hero,
+  .proj-featured,.proj-featured,.skills-outer{grid-template-columns:1fr}
+  .proj-featured{grid-template-columns:1fr}
+  .pf-left{border-right:none;border-bottom:1px solid var(--border)}
+  .research-hero{padding:36px}
+  .journey-grid,.proj-grid,.class-iou-grid{grid-template-columns:1fr 1fr}
+  .hero-stats-row{flex-wrap:wrap;gap:24px}
+  .contact-right{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NEURAL CANVAS -->
+<canvas id="neural-canvas"></canvas>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner" id="ticker-inner">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#hero" class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    YAMRAJ KHADKA
+  </a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#journey">Journey</a></li>
+    <li><a href="#research">Research</a></li>
+    <li><a href="#models">Models</a></li>
+  </ul>
+  <a href="#contact" class="nav-contact">Hire Me</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-eyebrow">
+    <div class="eyebrow-line"></div>
+    Computer Engineering · IOE Purwanchal Campus · Nepal
+  </div>
+
+  <div class="terminal-boot" id="terminal">
+    <div class="terminal-line" id="t1"><span class="green">$</span> <span class="cyan">init</span> portfolio.py --mode=full</div>
+    <div class="terminal-line" id="t2"><span class="green">✓</span> Loading: <span class="cyan">Mistral-7B fine-tuned</span> on Nepal Penal Code</div>
+    <div class="terminal-line" id="t3"><span class="green">✓</span> Loading: <span class="cyan">U-Net</span> for satellite segmentation (mIoU: 0.674)</div>
+    <div class="terminal-line" id="t4"><span class="green">✓</span> Loading: <span class="cyan">17 days</span> of deep learning in public</div>
+    <div class="terminal-line" id="t5"><span class="green">✓</span> Status: <span class="red">Building AI for Nepal</span> <span class="terminal-cursor"></span></div>
+  </div>
+
+  <h1 class="hero-name">YAMRAJ</h1>
+  <div class="hero-name-sub">ML &amp; AI <span>Builder</span></div>
+
+  <div class="hero-tagline">
+    <div class="tagline-main">Fine-tuning LLMs, training U-Nets, writing research papers, and shipping code — all as a CS student from Nepal.</div>
+    <div class="tagline-flag">🇳🇵</div>
+  </div>
+
+  <div class="hero-cta">
+    <a href="#projects" class="cta-primary"><span>See My Work</span></a>
+    <a href="https://github.com/yamrajkhadka" target="_blank" class="cta-ghost">GitHub</a>
+    <a href="https://huggingface.co/yamraj047" target="_blank" class="cta-ghost">Hugging Face</a>
+  </div>
+
+  <div class="hero-stats-row">
+    <div class="hstat">
+      <div class="hstat-num">13<span class="unit">.5GB</span></div>
+      <div class="hstat-label">LLM Fine-tuned</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-num">4<span class="unit">GB</span></div>
+      <div class="hstat-label">GGUF Quantized</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-num">67<span class="unit">%</span></div>
+      <div class="hstat-label">U-Net Mean IoU</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-num">&lt;24<span class="unit">hrs</span></div>
+      <div class="hstat-label">Community Adoption</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-num">4<span class="unit">+</span></div>
+      <div class="hstat-label">Live Deployments</div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="chip">About Me</div>
+  <h2 class="st">Not just <em>studying</em><br/>AI — <em>shipping</em> it</h2>
+  <div class="about-container">
+    <div class="about-left reveal">
+      <div class="about-body">
+        <p>I'm a <strong>Computer Engineering undergraduate</strong> at Tribhuvan University, IOE Purwanchal Campus in Biratnagar, Nepal. While most students learn about ML from textbooks, I build production systems with it.</p>
+        <p>My flagship project — a fine-tuned <strong>Mistral-7B on Nepal's National Penal Code</strong> — was adopted by the open-source community within 24 hours of release, re-quantized into Q2–Q8 GGUF variants, and integrated into the llama.cpp ecosystem by community maintainers.</p>
+        <p>I presented my <strong>U-Net satellite segmentation paper</strong> at ICRTAI 2025, receiving direct feedback from Prof. Dr. Sudan Jha. I also built a multi-agent AI app, an Android legal assistant, and documented <span class="highlight">17+ days of deep learning</span> in public on LinkedIn.</p>
+        <p>Currently an <strong>AI intern at Planto AI</strong>, working on neural networks in production.</p>
+      </div>
+      <div class="quote-block reveal">
+        <div class="quote-text">"Build things that matter for the place you're from."</div>
+        <div class="quote-sub">— the philosophy behind every Nepal-specific AI project</div>
+      </div>
+    </div>
+    <div class="about-right reveal">
+      <div class="grind-counter">
+        <div class="grind-header">Building in Public</div>
+        <div class="grind-grid">
+          <div class="grind-cell"><div class="grind-num">17+</div><div class="grind-name">DL Days</div></div>
+          <div class="grind-cell"><div class="grind-num">509</div><div class="grind-name">Followers</div></div>
+          <div class="grind-cell"><div class="grind-num">33</div><div class="grind-name">Max Reactions</div></div>
+          <div class="grind-cell"><div class="grind-num">10+</div><div class="grind-name">Projects</div></div>
+          <div class="grind-cell"><div class="grind-num">3</div><div class="grind-name">Certifications</div></div>
+          <div class="grind-cell"><div class="grind-num">1</div><div class="grind-name">Conference</div></div>
+        </div>
+      </div>
+      <div class="info-table">
+        <div class="it-row"><span class="it-k">Location</span><span class="it-v">Biratnagar, Kosi Zone 🇳🇵</span></div>
+        <div class="it-row"><span class="it-k">Current</span><span class="it-v">AI Intern @ Planto AI</span></div>
+        <div class="it-row"><span class="it-k">GitHub</span><span class="it-v"><a href="https://github.com/yamrajkhadka" target="_blank">@yamrajkhadka</a></span></div>
+        <div class="it-row"><span class="it-k">HuggingFace</span><span class="it-v"><a href="https://huggingface.co/yamraj047" target="_blank">@yamraj047</a></span></div>
+        <div class="it-row"><span class="it-k">LinkedIn</span><span class="it-v"><a href="https://linkedin.com/in/yamraj-khadka-7806b833b" target="_blank">yamraj-khadka</a></span></div>
+        <div class="it-row"><span class="it-k">Open To</span><span class="it-v" style="color:var(--cyan)">ML Internships · Research Collab</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="chip">Projects</div>
+  <h2 class="st">Things I've <em>Built</em><br/>&amp; <em>Shipped</em></h2>
+
+  <!-- FEATURED: Nepal Legal AI -->
+  <div class="proj-featured reveal">
+    <div class="pf-left">
+      <div class="pf-num">Featured Project · 01</div>
+      <div class="pf-title">Nepal Legal AI System</div>
+      <div class="pf-desc">End-to-end legal AI for Nepal's National Penal Code. Built the full pipeline: PDF extraction → hierarchical chunking → embeddings → RAG → Mistral-7B fine-tuning → GGUF quantization → 4 live deployments + Android app. The model was adopted by community maintainer mradermacher within 24 hours and re-distributed in Q2–Q8 formats.</div>
+      <div class="pf-tags">
+        <span class="ptag hot">LLM Fine-tuning</span>
+        <span class="ptag hot">Mistral-7B</span>
+        <span class="ptag">RAG + FAISS</span>
+        <span class="ptag">GGUF Quantization</span>
+        <span class="ptag">FastAPI</span>
+        <span class="ptag">React Native</span>
+        <span class="ptag live">4 Live Apps</span>
+        <span class="ptag gold">Community Adopted</span>
+      </div>
+      <div class="pf-links">
+        <a href="https://huggingface.co/yamraj047/nepal-legal-mistral-7b" target="_blank" class="plink primary">🤗 FP16 Model →</a>
+        <a href="https://huggingface.co/yamraj047/nepal-legal-mistral-7b-GGUF" target="_blank" class="plink">GGUF Model</a>
+        <a href="https://github.com/e-wakil/Fine-tuning-penal-code-Nepal" target="_blank" class="plink">GitHub</a>
+      </div>
+    </div>
+    <div class="pf-right">
+      <div>
+        <div class="pf-right-title">Model Specifications</div>
+        <div class="metric-row">
+          <div class="mr-top"><span class="mr-label">Base Model</span><span class="mr-val">Mistral-7B</span></div>
+          <div class="mr-bar"><div class="mr-fill" style="width:100%"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="mr-top"><span class="mr-label">Original Size</span><span class="mr-val">13.5 GB (FP16)</span></div>
+          <div class="mr-bar"><div class="mr-fill" style="width:100%"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="mr-top"><span class="mr-label">Quantized (Q4_K_M)</span><span class="mr-val">4.07 GB</span></div>
+          <div class="mr-bar"><div class="mr-fill" style="width:30%"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="mr-top"><span class="mr-label">Community Variants</span><span class="mr-val">Q2–Q8, IQ, f16</span></div>
+          <div class="mr-bar"><div class="mr-fill" style="width:80%"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="mr-top"><span class="mr-label">Embedding Model</span><span class="mr-val">all-mpnet-base-v2</span></div>
+          <div class="mr-bar"><div class="mr-fill" style="width:70%"></div></div>
+        </div>
+      </div>
+      <div class="pf-badge">
+        <div class="badge-title">🚀 Community Impact</div>
+        <div class="badge-text">Within 24 hours, community maintainer <strong style="color:var(--white)">mradermacher</strong> re-quantized and distributed the model into the full llama.cpp ecosystem. Runs on consumer CPU hardware — no GPU needed.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-column grid -->
+  <div class="proj-grid reveal">
+
+    <div class="pg-card">
+      <div class="pg-num">02</div>
+      <div class="pg-title">U-Net Land Cover Segmentation</div>
+      <div class="pg-desc">Built U-Net from scratch in TensorFlow. Composite loss (Focal Tversky + weighted CCE). Deployed Streamlit app. Presented at ICRTAI 2025. Mean IoU: 0.674.</div>
+      <div class="pg-tags">
+        <span class="ptag hot">Published</span>
+        <span class="ptag">TensorFlow</span>
+        <span class="ptag live">Live App</span>
+      </div>
+      <a href="https://github.com/yamrajkhadka/project_on_img_seg_using_unet_archi" target="_blank" class="pg-link">View Project</a>
+    </div>
+
+    <div class="pg-card">
+      <div class="pg-num">03</div>
+      <div class="pg-title">HerAI — Multi-Agent System</div>
+      <div class="pg-desc">5 specialized LangGraph agents (Mood, Memory, Romantic, Surprise, Safety). RAG with FAISS for memory retrieval. Shows real multi-agent orchestration skills.</div>
+      <div class="pg-tags">
+        <span class="ptag hot">Agentic AI</span>
+        <span class="ptag">LangChain</span>
+        <span class="ptag">LangGraph</span>
+      </div>
+      <a href="https://github.com/yamrajkhadka/Agentic-AI" target="_blank" class="pg-link">View Project</a>
+    </div>
+
+    <div class="pg-card">
+      <div class="pg-num">04</div>
+      <div class="pg-title">GGUF + RAG Legal Assistant</div>
+      <div class="pg-desc">Real-time streaming via WebSocket. Bi-encoder + cross-encoder reranking. FAISS IVF index. Query LRU cache. Citation-format responses. Sub-second latency.</div>
+      <div class="pg-tags">
+        <span class="ptag hot">RAG</span>
+        <span class="ptag">WebSocket</span>
+        <span class="ptag live">Live</span>
+      </div>
+      <a href="https://github.com/yamrajkhadka/gguf-with-rag" target="_blank" class="pg-link">View Project</a>
+    </div>
+
+    <div class="pg-card">
+      <div class="pg-num">05</div>
+      <div class="pg-title">RNN / GRU / LSTM / BRNN From Scratch</div>
+      <div class="pg-desc">All four recurrent architectures implemented in pure PyTorch — no nn.RNN shortcuts. Built from the exact mathematical diagrams. Training loop + text generation.</div>
+      <div class="pg-tags">
+        <span class="ptag">PyTorch</span>
+        <span class="ptag">From Scratch</span>
+        <span class="ptag gold">Deep</span>
+      </div>
+      <a href="https://github.com/yamrajkhadka" target="_blank" class="pg-link">View Code</a>
+    </div>
+
+    <div class="pg-card">
+      <div class="pg-num">06</div>
+      <div class="pg-title">MLOps: Trip Duration Prediction</div>
+      <div class="pg-desc">MLflow experiment tracking, Optuna hyperparameter search, model registry, preprocessor serialization. Full reproducible pipeline on NYC taxi data.</div>
+      <div class="pg-tags">
+        <span class="ptag hot">MLOps</span>
+        <span class="ptag">MLflow</span>
+        <span class="ptag">Optuna</span>
+      </div>
+      <a href="https://github.com/yamrajkhadka/mloops_self_paced" target="_blank" class="pg-link">View Project</a>
+    </div>
+
+    <div class="pg-card">
+      <div class="pg-num">07</div>
+      <div class="pg-title">Nepal Legal Android App</div>
+      <div class="pg-desc">Native Android app (Expo + React Native) powered by production GGUF API. Chat UI, chat history, auth. Includes document scanner with auto-crop. No on-device model.</div>
+      <div class="pg-tags">
+        <span class="ptag">React Native</span>
+        <span class="ptag">TypeScript</span>
+        <span class="ptag live">APK Live</span>
+      </div>
+      <a href="https://expo.dev/accounts/yamraj047/projects/NepalLegalApp/builds/0594c69b-3a54-47ab-893a-c5f78fa668b2" target="_blank" class="pg-link">Download APK</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="chip">Stack</div>
+  <h2 class="st">What I <em>Work With</em></h2>
+  <div class="skills-outer">
+    <div class="skills-intro reveal">
+      <div class="skills-note">
+        I didn't just read about these tools — I used them to build <strong>real systems</strong> that run in production. Every item here maps to a project you can click on above.
+      </div>
+      <div class="learning-badge">
+        <div class="lb-num">17+</div>
+        <div class="lb-text">
+          <strong style="color:var(--amber)">Days of Deep Learning in Public</strong><br/>
+          Documented every concept from Perceptrons to U-Net on LinkedIn — the grind is real.
+        </div>
+      </div>
+    </div>
+    <div class="skills-right reveal">
+      <div class="skill-cat open">
+        <div class="skill-cat-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🧠 Deep Learning</span>
+          <span class="skill-cat-arrow">▶</span>
+        </div>
+        <div class="skill-cat-body">
+          <div class="skill-pills">
+            <span class="skill-pill core">TensorFlow / Keras</span>
+            <span class="skill-pill core">PyTorch</span>
+            <span class="skill-pill core">CNN / U-Net</span>
+            <span class="skill-pill core">RNN / LSTM / GRU</span>
+            <span class="skill-pill">Transfer Learning</span>
+            <span class="skill-pill">Albumentations</span>
+            <span class="skill-pill">Custom Loss Functions</span>
+            <span class="skill-pill">Regularization (L1/L2/Dropout)</span>
+          </div>
+        </div>
+      </div>
+      <div class="skill-cat">
+        <div class="skill-cat-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🤖 LLMs &amp; NLP</span>
+          <span class="skill-cat-arrow">▶</span>
+        </div>
+        <div class="skill-cat-body">
+          <div class="skill-pills">
+            <span class="skill-pill core">LLM Fine-tuning</span>
+            <span class="skill-pill core">Mistral-7B / LLaMA</span>
+            <span class="skill-pill core">GGUF Quantization</span>
+            <span class="skill-pill core">SentenceTransformers</span>
+            <span class="skill-pill core">FAISS</span>
+            <span class="skill-pill">RAG Pipelines</span>
+            <span class="skill-pill">Instruction Tuning</span>
+            <span class="skill-pill">llama-cpp-python</span>
+            <span class="skill-pill">Groq API</span>
+          </div>
+        </div>
+      </div>
+      <div class="skill-cat">
+        <div class="skill-cat-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>🔗 Agents &amp; Orchestration</span>
+          <span class="skill-cat-arrow">▶</span>
+        </div>
+        <div class="skill-cat-body">
+          <div class="skill-pills">
+            <span class="skill-pill core">LangChain</span>
+            <span class="skill-pill core">LangGraph</span>
+            <span class="skill-pill">Multi-agent Systems</span>
+            <span class="skill-pill">State Graph Routing</span>
+            <span class="skill-pill">Prompt Engineering</span>
+          </div>
+        </div>
+      </div>
+      <div class="skill-cat">
+        <div class="skill-cat-header" onclick="this.parentElement.classList.toggle('open')">
+          <span>⚙️ MLOps &amp; Deployment</span>
+          <span class="skill-cat-arrow">▶</span>
+        </div>
+        <div class="skill-cat-body">
+          <div class="skill-pills">
+            <span class="skill-pill core">FastAPI</span>
+            <span class="skill-pill core">Streamlit</span>
+            <span class="skill-pill core">MLflow</span>
+            <span class="skill-pill">Hugging Face Spaces</span>
+            <span class="skill-pill">Optuna</span>
+            <span class="skill-pill">Docker</span>
+            <span class="skill-pill">WebSocket</span>
+            <span class="skill-pill">React Native / Expo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JOURNEY -->
+<section id="journey">
+  <div class="chip">Learning in Public</div>
+  <h2 class="st">The <em>Grind</em> Log</h2>
+  <div class="journey-intro reveal">
+    While studying CS, I documented <strong>17+ consecutive days of deep learning</strong> on LinkedIn — building something real every single day, from scratch perceptrons to full CNN architectures. This isn't just coursework — it's obsession.
+  </div>
+  <div class="journey-grid reveal">
+    <div class="jcard">
+      <div class="jcard-day">01</div>
+      <div class="jcard-topic">Perceptron</div>
+      <div class="jcard-detail">Built a Perceptron from scratch in Python. Visualized decision boundaries. Identified XOR limitations.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard">
+      <div class="jcard-day">02</div>
+      <div class="jcard-topic">MLP + Forward Prop</div>
+      <div class="jcard-detail">Implemented forward propagation manually in NumPy and with TensorFlow/Keras side-by-side.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard">
+      <div class="jcard-day">05</div>
+      <div class="jcard-topic">Backpropagation</div>
+      <div class="jcard-detail">Implemented backprop math step-by-step: δ[L]=A[L]−Y, chain rule, parameter updates.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard">
+      <div class="jcard-day">10</div>
+      <div class="jcard-topic">Optimizer Comparison</div>
+      <div class="jcard-detail">Ran SGD, Momentum, RMSprop, Adam across shallow/deep networks at 1K/10K/50K samples.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard">
+      <div class="jcard-day">12</div>
+      <div class="jcard-topic">CNN + 98.46% MNIST</div>
+      <div class="jcard-detail">Built CNN with conv, pooling, dense layers. Achieved 98.46% accuracy on handwritten digits.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard">
+      <div class="jcard-day">14</div>
+      <div class="jcard-topic">Transfer Learning VGG16</div>
+      <div class="jcard-detail">Fine-tuned VGG16 on CIFAR-10, frozen base layers. Achieved 73.13% with minimal compute.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard">
+      <div class="jcard-day">17</div>
+      <div class="jcard-topic">U-Net Architecture</div>
+      <div class="jcard-detail">Studied semantic segmentation → started applying U-Net to Nepal farmland identification from satellite.</div>
+      <div class="jcard-status">Shipped</div>
+    </div>
+    <div class="jcard" style="background:rgba(220,20,60,0.06);border:1px solid rgba(220,20,60,0.15)">
+      <div class="jcard-day" style="color:rgba(220,20,60,0.3)">→</div>
+      <div class="jcard-topic" style="color:var(--red)">Then it escalated</div>
+      <div class="jcard-detail">From 17 days of learning to publishing a conference paper. From LeNet to fine-tuning Mistral-7B. The grind continues.</div>
+      <div class="jcard-status" style="color:var(--amber)">Ongoing</div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEARCH -->
+<section id="research">
+  <div class="chip">Research</div>
+  <h2 class="st">Published <em>Work</em></h2>
+  <div class="research-hero reveal">
+    <div>
+      <div class="rh-badge">📄 Peer Reviewed · ICRTAI 2025 · Nepal</div>
+      <div class="rh-title">Land Cover Segmentation from Satellite Imagery Using U-Net with Custom Loss and Morphological Postprocessing</div>
+      <div class="rh-meta">Yamraj Khadka · IOE Purwanchal Campus · Presented June 28–29, 2025</div>
+      <div class="rh-abstract">Proposes a U-Net architecture for 7-class pixel-wise land cover classification on the DeepGlobe dataset. Introduces a composite loss function (60% Focal Tversky + 40% weighted categorical cross-entropy) to address extreme class imbalance. Applies morphological and median filter postprocessing for cleaner segment boundaries. Trained with Albumentations augmentation pipeline. Deployed as a Streamlit web app with interactive visualization.</div>
+    </div>
+    <div class="rh-scores">
+      <div class="score-box">
+        <div class="score-val">0.674</div>
+        <div class="score-lab">Mean IoU</div>
+      </div>
+      <div class="score-box">
+        <div class="score-val">7</div>
+        <div class="score-lab">Land Classes</div>
+      </div>
+      <div class="score-box" style="background:rgba(220,20,60,0.08);border-color:rgba(220,20,60,0.2)">
+        <div class="score-val" style="color:var(--red);font-size:32px">ICRTAI<br/>2025</div>
+        <div class="score-lab">Conference</div>
+      </div>
+    </div>
+  </div>
+  <div class="class-iou-grid reveal">
+    <div class="ciou"><div class="ciou-name">Urban<br/>Land</div><div class="ciou-val" style="color:var(--cyan)">0.72</div></div>
+    <div class="ciou"><div class="ciou-name">Agriculture<br/>Land</div><div class="ciou-val" style="color:var(--cyan)">0.72</div></div>
+    <div class="ciou"><div class="ciou-name">Range<br/>Land</div><div class="ciou-val" style="color:var(--red)">0.35</div></div>
+    <div class="ciou"><div class="ciou-name">Forest<br/>Land</div><div class="ciou-val" style="color:var(--cyan)">0.72</div></div>
+    <div class="ciou"><div class="ciou-name">Water</div><div class="ciou-val" style="color:var(--amber)">0.66</div></div>
+    <div class="ciou"><div class="ciou-name">Barren<br/>Land</div><div class="ciou-val" style="color:var(--amber)">0.57</div></div>
+    <div class="ciou"><div class="ciou-name">Unknown</div><div class="ciou-val" style="color:var(--cyan)">0.98</div></div>
+  </div>
+</section>
+
+<!-- MODELS ON HUGGING FACE -->
+<section id="models">
+  <div class="chip">Hugging Face</div>
+  <h2 class="st">Models I've <em>Released</em></h2>
+  <div class="model-cards reveal">
+    <div class="mcard">
+      <div class="mcard-icon">🤗</div>
+      <div class="mcard-name">Nepal Legal Mistral-7B</div>
+      <div class="mcard-id">yamraj047/nepal-legal-mistral-7b</div>
+      <div class="mcard-specs">
+        <div class="mspec"><span class="mspec-k">Format</span><span class="mspec-v">FP16</span></div>
+        <div class="mspec"><span class="mspec-k">Size</span><span class="mspec-v">~13.5 GB</span></div>
+        <div class="mspec"><span class="mspec-k">Base</span><span class="mspec-v">Mistral-7B-v0.1</span></div>
+        <div class="mspec"><span class="mspec-k">Training</span><span class="mspec-v">Instruction tuning on Nepal Penal Code</span></div>
+        <div class="mspec"><span class="mspec-k">Hardware</span><span class="mspec-v">16GB RAM CPU / GPU</span></div>
+      </div>
+      <a href="https://huggingface.co/yamraj047/nepal-legal-mistral-7b" target="_blank" class="mcard-link">View on Hugging Face</a>
+    </div>
+    <div class="mcard">
+      <div class="mcard-icon">⚡</div>
+      <div class="mcard-name">Nepal Legal Mistral-7B GGUF</div>
+      <div class="mcard-id">yamraj047/nepal-legal-mistral-7b-GGUF</div>
+      <div class="mcard-specs">
+        <div class="mspec"><span class="mspec-k">Format</span><span class="mspec-v">Q4_K_M GGUF</span></div>
+        <div class="mspec"><span class="mspec-k">Size</span><span class="mspec-v">4.07 GB</span></div>
+        <div class="mspec"><span class="mspec-k">Context</span><span class="mspec-v">2048 tokens</span></div>
+        <div class="mspec"><span class="mspec-k">Inference</span><span class="mspec-v">llama-cpp-python / LM Studio</span></div>
+        <div class="mspec"><span class="mspec-k">Hardware</span><span class="mspec-v">8GB RAM, CPU only</span></div>
+      </div>
+      <a href="https://huggingface.co/yamraj047/nepal-legal-mistral-7b-GGUF" target="_blank" class="mcard-link">View on Hugging Face</a>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-split">
+    <div class="contact-left reveal">
+      <div class="chip">Contact</div>
+      <div class="contact-big">
+        Let's<br/><span class="line2">Work</span><br/>Together
+      </div>
+      <div class="contact-sub">I'm looking for ML internships and research collaborations. Especially excited about AI for low-resource, developing contexts. Let's build something that matters.</div>
+      <div class="contact-links">
+        <a href="https://github.com/yamrajkhadka" target="_blank" class="clink">
+          <div class="clink-icon">⬡</div>
+          <div class="clink-info">
+            <div class="clink-platform">GitHub</div>
+            <div class="clink-handle">@yamrajkhadka</div>
+          </div>
+          <div class="clink-arrow">→</div>
+        </a>
+        <a href="https://huggingface.co/yamraj047" target="_blank" class="clink">
+          <div class="clink-icon">🤗</div>
+          <div class="clink-info">
+            <div class="clink-platform">Hugging Face</div>
+            <div class="clink-handle">@yamraj047</div>
+          </div>
+          <div class="clink-arrow">→</div>
+        </a>
+        <a href="https://www.linkedin.com/in/yamraj-khadka-7806b833b" target="_blank" class="clink">
+          <div class="clink-icon">◈</div>
+          <div class="clink-info">
+            <div class="clink-platform">LinkedIn</div>
+            <div class="clink-handle">yamraj-khadka</div>
+          </div>
+          <div class="clink-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="contact-right reveal">
+      <div class="cr-title">What I bring</div>
+      <div class="cr-item">
+        <div class="cr-icon">▶</div>
+        <div class="cr-text"><strong>I ship things.</strong> Every project here is live, deployed, and usable — not just notebooks.</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-icon">▶</div>
+        <div class="cr-text"><strong>Full-stack ML.</strong> From PDF parsing to LLM fine-tuning to Android app to production API.</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-icon">▶</div>
+        <div class="cr-text"><strong>Research depth.</strong> Conference paper, custom loss functions, architectural choices with justification.</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-icon">▶</div>
+        <div class="cr-text"><strong>Learning velocity.</strong> From perceptrons to Mistral fine-tuning in under a year of focused building.</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-icon">▶</div>
+        <div class="cr-text"><strong>Nepal-first mission.</strong> I build AI that serves underrepresented languages and legal systems.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>© 2025 Yamraj Khadka <span class="footer-nepal">🇳🇵</span> Biratnagar, Nepal</span>
+  <span>Computer Engineering · TU IOE Purwanchal Campus</span>
+  <span>Built by hand, not by template</span>
+</footer>
+
+<script>
+/* ── CURSOR ── */
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=mx-6+'px';
+  cursor.style.top=my-6+'px';
+});
+function animRing(){
+  rx+=(mx-rx)*0.1; ry+=(my-ry)*0.1;
+  ring.style.left=rx+'px'; ring.style.top=ry+'px';
+  requestAnimationFrame(animRing);
+}animRing();
+
+/* ── TICKER ── */
+const items=['Python','TensorFlow','PyTorch','Mistral-7B','GGUF','FAISS','FastAPI','Streamlit','LangChain','LangGraph','MLflow','React Native','U-Net','ICRTAI 2025','Nepal AI','HuggingFace'];
+const ti=document.getElementById('ticker-inner');
+const doubled=[...items,...items,...items,...items];
+ti.innerHTML=doubled.map(i=>`<div class="ticker-item">${i}</div>`).join('');
+
+/* ── TERMINAL BOOT ── */
+const lines=['t1','t2','t3','t4','t5'];
+lines.forEach((id,i)=>{
+  setTimeout(()=>document.getElementById(id).classList.add('active'),300+i*500);
+});
+
+/* ── NEURAL CANVAS ── */
+const canvas=document.getElementById('neural-canvas');
+const ctx=canvas.getContext('2d');
+let W,H,nodes=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+resize();window.addEventListener('resize',()=>{resize();initNodes()});
+function initNodes(){
+  nodes=[];
+  const count=Math.floor((W*H)/14000);
+  for(let i=0;i<count;i++){
+    nodes.push({
+      x:Math.random()*W,y:Math.random()*H,
+      vx:(Math.random()-.5)*0.3,vy:(Math.random()-.5)*0.3,
+      r:Math.random()*2+1,
+      pulse:Math.random()*Math.PI*2
+    });
+  }
+}
+initNodes();
+let frame=0;
+function drawNeural(){
+  ctx.clearRect(0,0,W,H);
+  frame++;
+  nodes.forEach(n=>{
+    n.x+=n.vx; n.y+=n.vy;
+    if(n.x<0||n.x>W)n.vx*=-1;
+    if(n.y<0||n.y>H)n.vy*=-1;
+    n.pulse+=0.02;
+    const alpha=0.4+0.2*Math.sin(n.pulse);
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(220,20,60,${alpha})`;
+    ctx.fill();
+  });
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[i].x-nodes[j].x;
+      const dy=nodes[i].y-nodes[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){
+        const alpha=(1-d/120)*0.25;
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x,nodes[i].y);
+        ctx.lineTo(nodes[j].x,nodes[j].y);
+        ctx.strokeStyle=`rgba(220,20,60,${alpha})`;
+        ctx.lineWidth=0.5;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawNeural);
+}drawNeural();
+
+/* ── SCROLL REVEAL ── */
+const reveals=document.querySelectorAll('.reveal');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach((e,i)=>{
+    if(e.isIntersecting){
+      setTimeout(()=>e.target.classList.add('in'),i*60);
+      obs.unobserve(e.target);
+    }
+  });
+},{threshold:0.08});
+reveals.forEach(el=>obs.observe(el));
+
+/* ── METRIC BAR ANIMATION ── */
+const fills=document.querySelectorAll('.mr-fill');
+const fobs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const w=e.target.style.width;
+      e.target.style.width='0';
+      setTimeout(()=>{e.target.style.transition='width 1s ease';e.target.style.width=w;},100);
+      fobs.unobserve(e.target);
+    }
+  });
+},{threshold:0.5});
+fills.forEach(f=>fobs.observe(f));
+
+/* ── 3D CARD TILT ── */
+document.querySelectorAll('.pg-card').forEach(card=>{
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect();
+    const x=(e.clientX-r.left-r.width/2)/r.width;
+    const y=(e.clientY-r.top-r.height/2)/r.height;
+    card.style.transform=`translateY(-4px) rotateY(${x*8}deg) rotateX(${-y*8}deg)`;
+  });
+  card.addEventListener('mouseleave',()=>{card.style.transform='';});
+});
+
+/* ── SMOOTH NAV HIGHLIGHT ── */
+const sections=document.querySelectorAll('section[id]');
+const navLinks=document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll',()=>{
+  let current='';
+  sections.forEach(s=>{if(window.scrollY>=s.offsetTop-120)current=s.id});
+  navLinks.forEach(a=>{
+    a.style.color=a.getAttribute('href')==='#'+current?'var(--white)':'';
+  });
+},{passive:true});
+</script>
+</body>
+</html>
